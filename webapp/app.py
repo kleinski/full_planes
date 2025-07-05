@@ -178,7 +178,8 @@ def index():
         'origin': request.args.get('origin', ''),
         'destination': request.args.get('destination', ''),
         'start_date': request.args.get('start_date', today_str),
-        'end_date': request.args.get('end_date', today_str)
+        'end_date': request.args.get('end_date', today_str),
+        'max_seats': request.args.get('max_seats', '')
     }
 
     return render_template(
@@ -195,6 +196,7 @@ def search():
     destination = request.form.get('destination').upper().strip() # type: ignore
     start_date_str = request.form.get('start_date')
     end_date_str = request.form.get('end_date')
+    max_seats_str = request.form.get('max_seats')
 
     if not all([origin, destination, start_date_str, end_date_str]):
         return redirect(url_for('index', error="Bitte alle Felder ausfüllen."))
@@ -225,6 +227,12 @@ def search():
         all_found_flights.extend(flights)
         time.sleep(REQUEST_DELAY_SECONDS)
     
+    # Filter flights based on the optional seat limit
+    max_seats = None
+    if max_seats_str and max_seats_str.isdigit():
+        max_seats = int(max_seats_str)
+        all_found_flights = [flight for flight in all_found_flights if flight['seats'] < max_seats]
+    
     # Create a lookup dictionary for full airport names
     airports_map = {airport['iata']: f"{airport['city']} – {airport['name']}" for airport in GERMAN_AIRPORTS + DESTINATION_AIRPORTS if 'city' in airport}
 
@@ -248,7 +256,8 @@ def search():
         origin_full=origin_full,
         destination_full=destination_full,
         start_date=start_date_str,
-        end_date=end_date_str
+        end_date=end_date_str,
+        max_seats=max_seats_str
     )
 
 @app.route('/impressum')

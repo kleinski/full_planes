@@ -70,6 +70,9 @@
 
             <label for="end_date">Abfragedatum bis:</label>
             <input type="date" id="end_date" name="end_date" required value="{{ search.end_date }}">
+
+            <label for="max_seats">Wie viele Plätze frei:</label>
+            <input type="number" id="max_seats" name="max_seats" placeholder="Weniger als ... Plätze frei" value="{{ search.max_seats }}" min="1">
             
             <button type="submit">Flüge suchen</button>
         </form>
