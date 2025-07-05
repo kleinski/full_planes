@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Flugsuche</title>
+    <style>
+        body { font-family: sans-serif; margin: 2em; background-color: #f4f4f9; display: flex; justify-content: center; }
+        .container { background: white; padding: 2em; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); width: 100%; max-width: 500px; }
+        h1 { color: #333; }
+        form { display: flex; flex-direction: column; gap: 15px; }
+        label { font-weight: bold; margin-bottom: 5px; }
+        input[type="text"], input[type="date"], select { padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 16px; width: 100%; box-sizing: border-box; }
+        button { padding: 12px; background-color: #007bff; color: white; border: none; border-radius: 4px; font-size: 16px; cursor: pointer; }
+        button:not(:disabled):hover { background-color: #0056b3; }
+        button:disabled { background-color: #cccccc; cursor: not-allowed; }
+        .error { color: #d9534f; font-weight: bold; margin-top: 10px; }
+
+        /* Loader Styles */
+        .loader-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0.85);
+            display: flex; /* Will be set to flex by JS */
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+        .loader { border: 8px solid #f3f3f3; border-top: 8px solid #007bff; border-radius: 50%; width: 60px; height: 60px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Search Form Title -->
+        <h1>Flugsuche</h1>
+        
+        {% if error %}
+            <p class="error">{{ error }}</p>
+        {% endif %}
+
+        <!-- Search Form -->
+        <form action="/search" method="post">
+            <label for="origin">Abflughafen:</label>
+            <select id="origin" name="origin" required>
+                <option value="" disabled {% if not search.origin %}selected{% endif %}>Bitte Flughafen auswählen...</option>
+                {% for airport in airports %}
+                    <option value="{{ airport.iata }}" {% if airport.iata == search.origin %}selected{% endif %}>
+                        {{ airport.city }} - {{ airport.name }} ({{ airport.iata }})
+                    </option>
+                {% endfor %}
+            </select>
+
+            <label for="destination">Zielflughafen:</label>
+            <select id="destination" name="destination" required>
+                <option value="" disabled {% if not search.destination %}selected{% endif %}>Bitte Flughafen auswählen...</option>
+                {% for airport in destination_airports %}
+                    <option value="{{ airport.iata }}" {% if airport.iata == search.destination %}selected{% endif %}>
+                        {{ airport.city }} - {{ airport.name }} ({{ airport.iata }})
+                    </option>
+                {% endfor %}
+            </select>
+
+            <label for="start_date">Abfragedatum von:</label>
+            <input type="date" id="start_date" name="start_date" required value="{{ search.start_date }}">
+
+            <label for="end_date">Abfragedatum bis:</label>
+            <input type="date" id="end_date" name="end_date" required value="{{ search.end_date }}">
+            
+            <button type="submit">Flüge suchen</button>
+        </form>
+    </div>
+
+    <!-- Loader Element (hidden by default) -->
+    <div id="loader" class="loader-container" style="display: none;">
+        <div class="loader"></div>
+        <p style="margin-top: 20px; font-size: 18px; color: #333;">Suche nach Flügen, bitte warten...</p>
+    </div>
+
+    <!-- Client-side validation for the date range -->
+    <script>
+        const startDateInput = document.getElementById('start_date');
+        const endDateInput = document.getElementById('end_date');
+
+        function validateDateRange() {
+            if (!startDateInput.value || !endDateInput.value) return;
+
+            const startDate = new Date(startDateInput.value);
+            const endDate = new Date(endDateInput.value);
+
+            if (endDate < startDate) {
+                alert("Das Enddatum darf nicht vor dem Startdatum liegen.");
+                endDateInput.value = startDateInput.value;
+                return;
+            }
+
+            const diffTime = Math.abs(endDate - startDate);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+
+            if (diffDays > 7) {
+                alert("Der Zeitraum darf maximal 7 Tage betragen.");
+                const newEndDate = new Date(startDate);
+                newEndDate.setDate(startDate.getDate() + 6);
+                endDateInput.value = newEndDate.toISOString().split('T')[0];
+            }
+        }
+
+        startDateInput.addEventListener('change', validateDateRange);
+        endDateInput.addEventListener('change', validateDateRange);
+
+        // Show loader on form submission
+        const form = document.querySelector('form');
+        const loader = document.getElementById('loader');
+        const submitButton = form.querySelector('button[type="submit"]');
+
+        form.addEventListener('submit', function() {
+            // Show the loader
+            loader.style.display = 'flex';
+            // Disable the button and change text to prevent multiple clicks
+            submitButton.disabled = true;
+            submitButton.textContent = 'Suche läuft...';
+        });
+    </script>
+</body>
+</html>
