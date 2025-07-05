@@ -10,14 +10,21 @@ Da die CDU Berlin Menschen bestrafen will, die Flugdetails von Abschiebungen ver
 Ich bin mal gespannt, ob diese App, die lediglich dazu dient, Flugdaten und Auslastungen von Linienflügen zügig zu ermitteln, schon kriminell ist ;-)
 
 ## Einrichtung
+1.  **Amadeus API-Schlüssel:**
+    Um die Anwendung zu nutzen, benötigst du eigene API-Schlüssel von Amadeus for Developers.
+    1.  Registriere dich auf der [Amadeus for Developers Webseite](https://developers.amadeus.com/register).
+    2.  Nach der Anmeldung, gehe zu deinem Dashboard und erstelle eine neue App.
+    3.  Du erhältst einen "API Key" (Client ID) und einen "API Secret" (Client Secret).
+    4.  Diese beiden Werte musst du in die `.env`-Datei eintragen.
+    Die Nutzung der Test-API im "Self-Service"-Tier ist kostenlos.
 
-1.  **Abhängigkeiten installieren:**
+2.  **Abhängigkeiten installieren:**
     Stelle sicher, dass du Python 3 installiert hast. Installiere dann die notwendigen Pakete:
     ```bash
     pip install -r requirements.txt
     ```
 
-2.  **Umgebungsvariablen setzen:**
+3.  **Umgebungsvariablen setzen:**
     Kopiere die `.env.example`-Datei zu `.env` und trage deine Amadeus API-Schlüssel ein:
     ```bash
     cp .env.example .env
