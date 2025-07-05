@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block title %}Impressum{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Impressum</h1>
+    <p><strong>Angaben gemäß § 5 TMG</strong></p>
+    <p>
+        Bundesministerium des Innern und für Heimat<br>
+        Alt-Moabit 140<br>
+        10557 Berlin<br>
+        Deutschland        
+    </p>
+
+    <p><strong>Kontakt</strong></p>
+    <p>
+        <!-- Telefon: +49 (0) 123 456789<br>-->
+        E-Mail: poststelle@bmi.bund.de
+    </p>
+
+    <p><strong>Haftungsausschluss (Disclaimer)</strong></p>
+    <p>
+        Die Inhalte der Seite wurden mit größter Sorgfalt erstellt. Für die Richtigkeit, Vollständigkeit und Aktualität der Inhalte kann jedoch keine Gewähr übernommen werden.
+    </p>
+    <p><a href="{{ url_for('index') }}">Zurück zur Startseite</a></p>
+</div>
+{% endblock %}

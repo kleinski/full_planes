@@ -1,11 +1,9 @@
-<!DOCTYPE html>
-<html lang="de">
-<head>
-    <meta charset="UTF-8">
-    <title>Flugsuche</title>
+{% extends "base.html" %}
+
+{% block container_width %}500px{% endblock %}
+
+{% block head_extra %}
     <style>
-        body { font-family: sans-serif; margin: 2em; background-color: #f4f4f9; display: flex; justify-content: center; }
-        .container { background: white; padding: 2em; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); width: 100%; max-width: 500px; }
         h1 { color: #333; }
         form { display: flex; flex-direction: column; gap: 15px; }
         label { font-weight: bold; margin-bottom: 5px; }
@@ -14,8 +12,6 @@
         button:not(:disabled):hover { background-color: #0056b3; }
         button:disabled { background-color: #cccccc; cursor: not-allowed; }
         .error { color: #d9534f; font-weight: bold; margin-top: 10px; }
-
-        /* Loader Styles */
         .loader-container {
             position: fixed;
             top: 0;
@@ -32,8 +28,9 @@
         .loader { border: 8px solid #f3f3f3; border-top: 8px solid #007bff; border-radius: 50%; width: 60px; height: 60px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
-</head>
-<body>
+{% endblock %}
+
+{% block content %}
     <div class="container">
         <!-- Search Form Title -->
         <h1>Flugsuche</h1>
@@ -83,27 +80,24 @@
         <div class="loader"></div>
         <p style="margin-top: 20px; font-size: 18px; color: #333;">Suche nach Flügen, bitte warten...</p>
     </div>
+{% endblock %}
 
+{% block scripts %}
     <!-- Client-side validation for the date range -->
     <script>
         const startDateInput = document.getElementById('start_date');
         const endDateInput = document.getElementById('end_date');
-
         function validateDateRange() {
             if (!startDateInput.value || !endDateInput.value) return;
-
             const startDate = new Date(startDateInput.value);
             const endDate = new Date(endDateInput.value);
-
             if (endDate < startDate) {
                 alert("Das Enddatum darf nicht vor dem Startdatum liegen.");
                 endDateInput.value = startDateInput.value;
                 return;
             }
-
             const diffTime = Math.abs(endDate - startDate);
             const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-
             if (diffDays > 7) {
                 alert("Der Zeitraum darf maximal 7 Tage betragen.");
                 const newEndDate = new Date(startDate);
@@ -111,7 +105,6 @@
                 endDateInput.value = newEndDate.toISOString().split('T')[0];
             }
         }
-
         startDateInput.addEventListener('change', function() {
             // When the start date changes, automatically set the end date to 6 days later.
             if (startDateInput.value) {
@@ -123,14 +116,11 @@
             // It's good practice to run validation afterwards as well.
             validateDateRange();
         });
-
         endDateInput.addEventListener('change', validateDateRange);
-
         // Show loader on form submission
         const form = document.querySelector('form');
         const loader = document.getElementById('loader');
         const submitButton = form.querySelector('button[type="submit"]');
-
         form.addEventListener('submit', function() {
             // Show the loader
             loader.style.display = 'flex';
@@ -139,5 +129,4 @@
             submitButton.textContent = 'Suche läuft...';
         });
     </script>
-</body>
-</html>
+{% endblock %}

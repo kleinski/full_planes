@@ -1,11 +1,11 @@
-<!DOCTYPE html>
-<html lang="de">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Flug-Report</title>
+{% extends "base.html" %}
+
+{% block title %}Flug-Report{% endblock %}
+
+{% block container_width %}1200px{% endblock %}
+
+{% block head_extra %}
     <style>
-        body { font-family: sans-serif; margin: 2em; background-color: #f4f4f9; }
         h1 { color: #333; }
         table { width: 100%; border-collapse: collapse; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
         th, td { padding: 12px; border: 1px solid #ddd; text-align: left; white-space: nowrap; }
@@ -20,8 +20,10 @@
         a { color: #007bff; text-decoration: none; font-weight: bold; }
         a:hover { text-decoration: underline; }
     </style>
-</head>
-<body>
+{% endblock %}
+
+{% block content %}
+<div class="container">
     <!-- Page Header -->
     <h1>Flug-Report</h1>
     <p>
@@ -72,14 +74,16 @@
         {% endif %}
         </tbody>
     </table>
+</div>
+{% endblock %}
 
+{% block scripts %}
     <!-- JavaScript for client-side table sorting -->
     <script>
         function sortTableByColumn(table, column, asc = true) {
             const dirModifier = asc ? 1 : -1;
             const tBody = table.tBodies[0];
             const rows = Array.from(tBody.querySelectorAll("tr"));
-
             const sortedRows = rows.sort((a, b) => {
                 const aColText = a.querySelector(`td:nth-child(${ column + 1 })`).textContent.trim();
                 const bColText = b.querySelector(`td:nth-child(${ column + 1 })`).textContent.trim();
@@ -90,15 +94,12 @@
                 }
                 return aColText.localeCompare(bColText) * dirModifier;
             });
-
             tBody.innerHTML = "";
             tBody.append(...sortedRows);
-
             table.querySelectorAll("th").forEach(th => th.classList.remove("th-sort-asc", "th-sort-desc"));
             table.querySelector(`th:nth-child(${ column + 1})`).classList.toggle("th-sort-asc", asc);
             table.querySelector(`th:nth-child(${ column + 1})`).classList.toggle("th-sort-desc", !asc);
         }
-
         document.querySelectorAll("table thead th").forEach(headerCell => {
             headerCell.addEventListener("click", () => {
                 const tableElement = headerCell.closest("table");
@@ -108,5 +109,4 @@
             });
         });
     </script>
-</body>
-</html>
+{% endblock %}

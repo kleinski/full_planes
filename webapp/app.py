@@ -1,4 +1,20 @@
 #!/usr/bin/env python3
+'''
+Full Planes - Flight Search Web App 
+
+Inspired by the article "Missbrauch von vertraulichen Informationen: Berliner CDU will Flüchtlingsaktivisten bestrafen, die Abschiebungen verraten" from Tagesspiegel:
+https://www.tagesspiegel.de/berlin/missbrauch-von-vertraulichen-informationen-berliner-cdu-will-fluchtlingsaktivisten-bestrafen-die-abschiebungen-verraten-13973525.html
+Since the CDU Berlin wants to punish activists who reveal flight details of deportations, this app provides a way to search for flights that may be used for deportations in Germany.
+Let's see if this app may be criminalized by the CDU as well.
+
+With greetings to 
+
+Copyright (C) 2025 Marcus Klein
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+'''
 
 import os
 import time
@@ -235,6 +251,10 @@ def search():
         end_date=end_date_str
     )
 
+@app.route('/impressum')
+def impressum():
+    """Displays the legal notice page."""
+    return render_template('impressum.html')
 
 # --- START APPLICATION ---
 if __name__ == '__main__':
