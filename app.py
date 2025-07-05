@@ -2,10 +2,7 @@
 '''
 Full Planes - Flight Search Web App 
 
-Inspired by the article "Missbrauch von vertraulichen Informationen: Berliner CDU will Flüchtlingsaktivisten bestrafen, die Abschiebungen verraten" from Tagesspiegel:
-https://www.tagesspiegel.de/berlin/missbrauch-von-vertraulichen-informationen-berliner-cdu-will-fluchtlingsaktivisten-bestrafen-die-abschiebungen-verraten-13973525.html
-Since the CDU Berlin wants to punish activists who reveal flight details of deportations, this app provides a way to search for flights that may be used for deportations in Germany.
-Let's see if this app may be criminalized by the CDU as well.
+This web application allows users to search for direct flights from German airports to various destinations in the Schengen and non-Schengen areas using the Amadeus Flight Offers API.
 
 Copyright (C) 2025 Marcus Klein
 This program is free software: you can redistribute it and/or modify
