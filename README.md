@@ -46,7 +46,7 @@ Auf "Flüge suchen" klicken, warten, bis Ergebnisse da sind:
 
 ## Wichtiger Hinweis
 
-Diese Anwendung nutzt die **Test-API** von Amadeus. Die angezeigten Flugdaten sind daher **nicht real**, sondern dienen lediglich als Demonstrationsbeispiel.
+Diese Anwendung nutzt die **Test-API** von Amadeus. Die angezeigten Flugdaten sind daher **nur teilweise real**. Die tatsächliche Belegung lässt sich über die Test-API nicht ermitteln.
 
 Es werden ausschließlich **Linienflüge** abgefragt, keine Charterflüge, die häufig für Abschiebungen genutzt werden.
 
