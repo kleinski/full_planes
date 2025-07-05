@@ -7,7 +7,7 @@ https://www.tagesspiegel.de/berlin/missbrauch-von-vertraulichen-informationen-be
 
 Da die CDU Berlin Menschen bestrafen will, die Flugdetails von Abschiebungen verraten, zeigt diese Anwendung, mit welch geringem Aufwand (kein halber Tag Programmierung mit Unterstützung durch eine KI) sich potenziell für Abschiebungen genutzte Flüge in Deutschland ermitteln lassen. 
 
-Ich bin mal gespannt, ob diese App, die lediglich dazu dient, Flugdaten von Linienflügen schnell zu ermitteln, schon kriminell ist ;-)
+Ich bin mal gespannt, ob diese App, die lediglich dazu dient, Flugdaten und Auslastungen von Linienflügen zügig zu ermitteln, schon kriminell ist ;-)
 
 ## Einrichtung
 
