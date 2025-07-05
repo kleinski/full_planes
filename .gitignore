@@ -3,5 +3,4 @@ report.html
 .vscode/launch.json
 .DS_Store
 TODO.md
-webapp/.env
 .env
