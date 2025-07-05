@@ -239,7 +239,7 @@ def search():
         flight['from_full'] = airports_map.get(flight['from'], flight['from'])
         flight['to_full'] = airports_map.get(flight['to'], flight['to'])
         carrier_code = flight['flight'].split(' ')[0]
-        flight['airline_name'] = AIRLINE_CODES.get(carrier_code, carrier_code)
+        flight['airline_name'] = AIRLINE_CODES.get(carrier_code, f"Unbekannte Airline ({carrier_code})")
 
     # Get full names for the results page header
     origin_full = airports_map.get(origin, origin)
