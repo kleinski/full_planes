@@ -16,7 +16,10 @@ import time
 from datetime import date, datetime, timedelta
 
 import requests
+from dotenv import load_dotenv
 from flask import Flask, redirect, render_template, request, url_for
+
+load_dotenv()
 
 # --- FLASK APP INITIALIZATION ---
 app = Flask(__name__)
