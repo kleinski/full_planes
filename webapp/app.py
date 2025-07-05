@@ -51,9 +51,12 @@ GERMAN_AIRPORTS = [
 
 # List of selectable destination airports
 DESTINATION_AIRPORTS = [
+    # Separator for visual grouping in the dropdown
+    {'iata': '---', 'name': 'Schengen-Raum'},
     {'city': 'Wien', 'name': 'Flughafen Wien-Schwechat', 'iata': 'VIE'},
     {'city': 'Paris', 'name': 'Flughafen Paris-Charles-de-Gaulle', 'iata': 'CDG'},
     {'city': 'Madrid', 'name': 'Flughafen Adolfo Suárez Madrid-Barajas', 'iata': 'MAD'},
+    {'iata': '---', 'name': 'Nicht-Schengen-Raum'},
     {'city': 'Tiflis', 'name': 'Internationaler Flughafen Tiflis', 'iata': 'TBS'},
     {'city': 'Skopje', 'name': 'Internationaler Flughafen Skopje', 'iata': 'SKP'},
     {'city': 'Tirana', 'name': 'Flughafen Tirana Nënë Tereza', 'iata': 'TIA'},
@@ -67,6 +70,27 @@ DESTINATION_AIRPORTS = [
     {'city': 'Podgorica', 'name': 'Flughafen Podgorica', 'iata': 'TGD'}
 ]
 
+# Mapping for common airline IATA codes to names
+AIRLINE_CODES = {
+    'LH': 'Lufthansa',
+    'EW': 'Eurowings',
+    'DE': 'Condor',
+    'FR': 'Ryanair',
+    'U2': 'EasyJet',
+    'A3': 'Aegean Airlines',
+    'AF': 'Air France',
+    'OS': 'Austrian Airlines',
+    'IB': 'Iberia',
+    'KL': 'KLM Royal Dutch Airlines',
+    'LX': 'Swiss International Air Lines',
+    'SN': 'Brussels Airlines',
+    'TP': 'TAP Air Portugal',
+    'TK': 'Turkish Airlines',
+    'W6': 'Wizz Air',
+    'JU': 'Air Serbia',
+    'A9': 'Georgian Airways',
+    'SU': 'Aeroflot' # For SVO
+}
 
 # --- API-FUNKTIONEN ---
 
@@ -184,14 +208,29 @@ def search():
         flights = find_flights(token, origin, destination, current_date_str)
         all_found_flights.extend(flights)
         time.sleep(REQUEST_DELAY_SECONDS)
+    
+    # Create a lookup dictionary for full airport names
+    airports_map = {airport['iata']: f"{airport['city']} – {airport['name']}" for airport in GERMAN_AIRPORTS + DESTINATION_AIRPORTS if 'city' in airport}
 
+    # Enrich flight data with full airport and airline names
+    for flight in all_found_flights:
+        flight['from_full'] = airports_map.get(flight['from'], flight['from'])
+        flight['to_full'] = airports_map.get(flight['to'], flight['to'])
+        carrier_code = flight['flight'].split(' ')[0]
+        flight['airline_name'] = AIRLINE_CODES.get(carrier_code, carrier_code)
+
+    # Get full names for the results page header
+    origin_full = airports_map.get(origin, origin)
+    destination_full = airports_map.get(destination, destination)
     all_found_flights.sort(key=lambda x: (x['date'], x['departure_time']))
 
     return render_template(
         'results.html', 
         flights=all_found_flights,
-        origin=origin,
-        destination=destination,
+        origin=origin, # Keep IATA for the "new search" link
+        destination=destination, # Keep IATA for the "new search" link
+        origin_full=origin_full,
+        destination_full=destination_full,
         start_date=start_date_str,
         end_date=end_date_str
     )

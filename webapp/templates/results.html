@@ -25,7 +25,7 @@
     <!-- Page Header -->
     <h1>Flug-Report</h1>
     <p>
-        Gefundene Flüge von <strong>{{ origin }}</strong> nach <strong>{{ destination }}</strong>
+        Gefundene Flüge von <strong>{{ origin_full }}</strong> nach <strong>{{ destination_full }}</strong>
         im Zeitraum vom <strong>{{ start_date }}</strong> bis <strong>{{ end_date }}</strong>.
     </p>
     
@@ -42,9 +42,10 @@
                 <th>Von</th>
                 <th>Nach</th>
                 <th>Dauer</th>
+                <th>Fluggesellschaft</th>
                 <th>Flugnr.</th>
                 <th>Freie Plätze</th>
-                <th>Preis</th>
+                <!--<th>Preis</th>-->
             </tr>
         </thead>
         <!-- Table Body -->
@@ -55,17 +56,18 @@
                 <td>{{ flight.date }}</td>
                 <td>{{ flight.departure_time }}</td>
                 <td>{{ flight.arrival_time }}</td>
-                <td>{{ flight.from }}</td>
-                <td>{{ flight.to }}</td>
+                <td>{{ flight.from_full }}</td>
+                <td>{{ flight.to_full }}</td>
                 <td>{{ flight.duration }}</td>
+                <td>{{ flight.airline_name }}</td>
                 <td>{{ flight.flight }}</td>
                 <td>{{ flight.seats }}</td>
-                <td>{{ flight.price }}</td>
+                <!-- <td>{{ flight.price }}</td>-->
             </tr>
             {% endfor %}
         {% else %}
             <tr>
-                <td colspan="9" style="text-align:center;">Für die angegebenen Kriterien wurden keine Flüge gefunden.</td>
+                <td colspan="10" style="text-align:center;">Für die angegebenen Kriterien wurden keine Flüge gefunden.</td>
             </tr>
         {% endif %}
         </tbody>

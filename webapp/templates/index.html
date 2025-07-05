@@ -58,9 +58,13 @@
             <select id="destination" name="destination" required>
                 <option value="" disabled {% if not search.destination %}selected{% endif %}>Bitte Flughafen auswählen...</option>
                 {% for airport in destination_airports %}
-                    <option value="{{ airport.iata }}" {% if airport.iata == search.destination %}selected{% endif %}>
-                        {{ airport.city }} - {{ airport.name }} ({{ airport.iata }})
-                    </option>
+                    {% if airport.iata == '---' %}
+                        <option disabled style="font-weight: bold; background-color: #f0f0f0;">--- {{ airport.name }} ---</option>
+                    {% else %}
+                        <option value="{{ airport.iata }}" {% if airport.iata == search.destination %}selected{% endif %}>
+                            {{ airport.city }} - {{ airport.name }} ({{ airport.iata }})
+                        </option>
+                    {% endif %}
                 {% endfor %}
             </select>
 
@@ -108,7 +112,18 @@
             }
         }
 
-        startDateInput.addEventListener('change', validateDateRange);
+        startDateInput.addEventListener('change', function() {
+            // When the start date changes, automatically set the end date to 6 days later.
+            if (startDateInput.value) {
+                const startDate = new Date(startDateInput.value);
+                const newEndDate = new Date(startDate);
+                newEndDate.setDate(startDate.getDate() + 6);
+                endDateInput.value = newEndDate.toISOString().split('T')[0];
+            }
+            // It's good practice to run validation afterwards as well.
+            validateDateRange();
+        });
+
         endDateInput.addEventListener('change', validateDateRange);
 
         // Show loader on form submission
