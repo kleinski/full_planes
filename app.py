@@ -32,6 +32,12 @@ API_SECRET = os.getenv("AMADEUS_API_SECRET")
 # Pause between API requests in seconds to avoid rate limiting
 REQUEST_DELAY_SECONDS = 1.0 
 
+# Global cache for the Amadeus token
+amadeus_token_cache = {
+    'token': None,
+    'expires_at': 0
+}
+
 # Amadeus API URLs (Test environment)
 AMADEUS_AUTH_URL = "https://test.api.amadeus.com/v1/security/oauth2/token"
 AMADEUS_SEARCH_URL = "https://test.api.amadeus.com/v2/shopping/flight-offers"
@@ -109,18 +115,38 @@ AIRLINE_CODES = {
 # --- API-FUNKTIONEN ---
 
 def get_amadeus_token():
-    """Fetches an OAuth2 Access Token from the Amadeus API."""
+    """
+    Fetches an OAuth2 Access Token from the Amadeus API, using a simple cache
+    to avoid requesting a new token on every search.
+    """
+    # Check if a valid token exists in the cache (with a 60-second buffer for safety)
+    if amadeus_token_cache.get('token') and time.time() < amadeus_token_cache.get('expires_at', 0) - 60:
+        print("Using cached Amadeus API token.")
+        return amadeus_token_cache['token']
+
+    # If no valid token, get a new one
+    print("No valid token in cache, requesting a new one.")
     if not API_KEY or not API_SECRET:
         print("!!! ERROR: Environment variables AMADEUS_API_KEY and AMADEUS_API_SECRET not found.")
         return None
     
     headers = {'Content-Type': 'application/x-www-form-urlencoded'}
     data = {'grant_type': 'client_credentials', 'client_id': API_KEY, 'client_secret': API_SECRET}
+
     try:
         response = requests.post(AMADEUS_AUTH_URL, headers=headers, data=data)
         response.raise_for_status()
-        print("Successfully obtained Amadeus API token.")
-        return response.json()['access_token']
+        token_data = response.json()
+
+        # Cache the new token and its expiration time
+        access_token = token_data['access_token']
+        # Amadeus tokens usually last 1799 seconds (just under 30 mins)
+        expires_in = token_data.get('expires_in', 1799)
+        amadeus_token_cache['token'] = access_token
+        amadeus_token_cache['expires_at'] = time.time() + expires_in
+        
+        print(f"Successfully obtained and cached a new Amadeus API token, expires in {expires_in} seconds.")
+        return access_token
     except requests.exceptions.RequestException as e:
         print(f"Error getting Amadeus token: {e}")
         return None
@@ -268,4 +294,4 @@ if __name__ == '__main__':
     if not API_KEY or not API_SECRET:
         print("!!! ERROR: Please set the environment variables AMADEUS_API_KEY and AMADEUS_API_SECRET.")
     else:
-        app.run(debug=True)
+        app.run(debug=True, host='0.0.0.0', port=7000)
