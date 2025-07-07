@@ -474,4 +474,4 @@ if __name__ == '__main__':
     if not API_KEY or not API_SECRET:
         print("!!! ERROR: Please set the environment variables AMADEUS_API_KEY and AMADEUS_API_SECRET.")
     else:
-        app.run(debug=True, host='0.0.0.0', port=7000)
+        app.run(debug=True, host='0.0.0.0', port=5000)
