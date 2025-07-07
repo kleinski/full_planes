@@ -15,6 +15,8 @@ import concurrent.futures
 import csv
 import io
 import json
+import logging
+from logging.handlers import RotatingFileHandler
 import os
 import time
 from datetime import date, datetime, timedelta
@@ -31,13 +33,23 @@ load_dotenv()
 # --- FLASK APP INITIALIZATION ---
 app = Flask(__name__)
 
+# --- LOGGING SETUP ---
+# Use RotatingFileHandler to prevent log files from becoming too large.
+file_handler = RotatingFileHandler('app.log', maxBytes=1024 * 1024 * 5, backupCount=5) # 5 MB per file, 5 backups
+file_handler.setFormatter(logging.Formatter(
+    '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'
+))
+file_handler.setLevel(logging.INFO)
+app.logger.addHandler(file_handler)
+app.logger.setLevel(logging.INFO)
+
 # --- CONFIGURATION ---
 # Credentials are loaded from environment variables.
 API_KEY = os.getenv("AMADEUS_API_KEY")
 API_SECRET = os.getenv("AMADEUS_API_SECRET")
 app.secret_key = os.getenv("FLASK_SECRET_KEY")
 if not app.secret_key:
-    print("!!! WARNING: FLASK_SECRET_KEY is not set. Sessions are not secure.")
+    app.logger.warning("FLASK_SECRET_KEY is not set. Sessions are not secure. Using a temporary key.")
     app.secret_key = 'dev-secret-key-for-testing-only' # Fallback for development
 
 # --- Custom Exceptions ---
@@ -147,15 +159,15 @@ def check_and_consume_quota(calls_to_make: int) -> bool:
                 usage = json.load(f)
             # Reset count if it's a new day
             if usage.get('date') != today_str:
-                print("New day, resetting API call quota.")
+                app.logger.info("New day, resetting API call quota.")
                 usage = {'date': today_str, 'count': 0}
         except (FileNotFoundError, json.JSONDecodeError):
             # If file doesn't exist or is corrupt, create a new one.
-            print("Quota file not found or corrupt, creating a new one.")
+            app.logger.info("Quota file not found or corrupt, creating a new one.")
             pass # usage is already initialized for today
 
         if usage['count'] + calls_to_make > DAILY_API_CALL_LIMIT:
-            print(f"Daily API call limit reached. Current count: {usage['count']}, tried to add: {calls_to_make}")
+            app.logger.warning(f"Daily API call limit reached. Current count: {usage['count']}, tried to add: {calls_to_make}")
             return False
         
         # Consume the quota
@@ -164,10 +176,10 @@ def check_and_consume_quota(calls_to_make: int) -> bool:
         try:
             with open(QUOTA_FILE, 'w') as f:
                 json.dump(usage, f)
-            print(f"Consumed {calls_to_make} API calls. New daily count: {usage['count']}")
+            app.logger.info(f"Consumed {calls_to_make} API calls. New daily count: {usage['count']}")
             return True
         except IOError as e:
-            print(f"Error writing to quota file: {e}")
+            app.logger.error(f"Error writing to quota file: {e}")
             # If we can't write, we shouldn't proceed.
             return False
 
@@ -200,14 +212,14 @@ def get_amadeus_token() -> Optional[str]:
     """
     # Check if a valid token exists in the cache (with a 60-second buffer for safety)
     if amadeus_token_cache.get('token') and time.time() < amadeus_token_cache.get('expires_at', 0) - 60:
-        print("Using cached Amadeus API token.")
+        app.logger.info("Using cached Amadeus API token.")
         return amadeus_token_cache['token']
 
     # If no valid token, get a new one
-    print("No valid token in cache, requesting a new one.")
+    app.logger.info("No valid token in cache, requesting a new one.")
     if not API_KEY or not API_SECRET:
-        print("!!! ERROR: Environment variables AMADEUS_API_KEY and AMADEUS_API_SECRET not found.")
-        return None
+        app.logger.critical("Environment variables AMADEUS_API_KEY and AMADEUS_API_SECRET not found.")
+        raise AmadeusApiError("Server-Konfigurationsfehler: API-Schlüssel nicht gefunden.")
     
     headers = {'Content-Type': 'application/x-www-form-urlencoded'}
     data = {'grant_type': 'client_credentials', 'client_id': API_KEY, 'client_secret': API_SECRET}
@@ -224,10 +236,10 @@ def get_amadeus_token() -> Optional[str]:
         amadeus_token_cache['token'] = access_token
         amadeus_token_cache['expires_at'] = time.time() + expires_in
         
-        print(f"Successfully obtained and cached a new Amadeus API token, expires in {expires_in} seconds.")
+        app.logger.info(f"Successfully obtained and cached a new Amadeus API token, expires in {expires_in} seconds.")
         return access_token
     except requests.exceptions.RequestException as e:
-        print(f"Fatal error getting Amadeus token: {e}")
+        app.logger.error(f"Fatal error getting Amadeus token: {e}")
         raise AmadeusApiError(f"Fehler bei der Authentifizierung mit der Amadeus API. Bitte überprüfen Sie die Server-Logs. Details: {e}")
 
 def find_flights(token: str, origin: str, destination: str, departure_date: str, all_airports: List[Dict[str, str]], airline_codes: Dict[str, str]) -> List[Dict[str, Any]]:
@@ -254,10 +266,10 @@ def find_flights(token: str, origin: str, destination: str, departure_date: str,
             # If we are being rate-limited, wait and try again.
             if response.status_code == 429:
                 if attempt == 2: # Last attempt failed
-                    print(f"Giving up on {origin}->{destination} for {departure_date} after 3 failed attempts due to rate limiting.")
+                    app.logger.warning(f"Giving up on {origin}->{destination} for {departure_date} after 3 failed attempts due to rate limiting.")
                     raise AmadeusApiError("Das API-Ratenlimit wurde auch nach mehreren Versuchen überschritten. Die Suche wurde abgebrochen.")
                 wait_time = 1 * (2 ** attempt) # Exponential backoff: 1s, 2s, 4s
-                print(f"Rate limit hit for {origin}->{destination} on {departure_date}. Retrying in {wait_time}s... (Attempt {attempt + 1}/3)")
+                app.logger.info(f"Rate limit hit for {origin}->{destination} on {departure_date}. Retrying in {wait_time}s... (Attempt {attempt + 1}/3)")
                 time.sleep(wait_time)
                 continue
 
@@ -291,7 +303,7 @@ def find_flights(token: str, origin: str, destination: str, departure_date: str,
 
         except requests.exceptions.RequestException as e:
             # For connection errors, etc., log the error and stop retrying for this request.
-            print(f"Fatal API request failed for {origin}->{destination} on {departure_date}: {e}")
+            app.logger.error(f"Fatal API request failed for {origin}->{destination} on {departure_date}: {e}")
             raise AmadeusApiError(f"Die Amadeus API ist aufgrund eines Verbindungsfehlers nicht erreichbar. Details: {e}")
 
     raise AmadeusApiError(f"Unbekannter Fehler bei der Flugsuche für {origin}->{destination} am {departure_date}.")
@@ -339,6 +351,8 @@ def search() -> Any:
     # Now we know the values are not None, we can safely process them.
     origin = origin_val.upper().strip()
     destination = destination_val.upper().strip()
+    
+    app.logger.info(f"New search request from {request.remote_addr}: {origin} -> {destination} from {start_date_str} to {end_date_str}")
 
     try:
         start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
@@ -362,9 +376,6 @@ def search() -> Any:
 
     try:
         token = get_amadeus_token()
-        if not token:
-            # This case should now be handled by the exception in get_amadeus_token, but as a fallback:
-            raise AmadeusApiError("Konnte keinen API-Token erhalten. Überprüfen Sie Ihre Credentials und die Server-Logs.")
 
         all_airports = GERMAN_AIRPORTS + DESTINATION_AIRPORTS
         
@@ -378,16 +389,17 @@ def search() -> Any:
 
             for future in concurrent.futures.as_completed(future_to_date):
                 try:
-                    all_found_flights.extend(future.result())
+                    result = future.result()
+                    all_found_flights.extend(result)
                 except Exception as exc:
-                    print(f'A search task generated an exception: {exc}')
+                    app.logger.error(f'A search task generated an exception: {exc}', exc_info=True)
                     executor.shutdown(wait=False, cancel_futures=True)
                     raise exc # Re-raise to be caught by the outer try-except
 
     except AmadeusApiError as e:
         return render_template('error.html', error_message=str(e), is_debug=app.debug)
     except Exception as e:
-        print(f"An unexpected error occurred during search: {e}")
+        app.logger.exception(f"An unexpected error occurred during search: {e}")
         return render_template('error.html', error_message="Ein unerwarteter interner Fehler ist aufgetreten.", is_debug=app.debug)
     
     # Filter flights based on the optional seat limit
@@ -472,6 +484,7 @@ def export_csv() -> Response:
 # --- START APPLICATION ---
 if __name__ == '__main__':
     if not API_KEY or not API_SECRET:
-        print("!!! ERROR: Please set the environment variables AMADEUS_API_KEY and AMADEUS_API_SECRET.")
+        app.logger.critical("!!! FATAL: AMADEUS_API_KEY and AMADEUS_API_SECRET are not set. Application cannot start.")
     else:
+        app.logger.info("Starting Flask development server.")
         app.run(debug=True, host='0.0.0.0', port=5000)

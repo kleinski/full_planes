@@ -5,3 +5,5 @@ report.html
 TODO.md
 .env
 api_quota.json
+app.log
+app.log.*
