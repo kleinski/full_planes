@@ -16,10 +16,10 @@ import csv
 import io
 import json
 import logging
-from logging.handlers import RotatingFileHandler
 import os
 import time
 from datetime import date, datetime, timedelta
+from logging.handlers import RotatingFileHandler
 from threading import Lock
 from typing import Any, Dict, List, Optional
 
@@ -417,6 +417,12 @@ def search() -> Any:
 
     # Store results in session for CSV export
     session['search_results'] = all_found_flights
+    session['search_params'] = {
+        'origin': origin,
+        'destination': destination,
+        'start_date': start_date_str,
+        'end_date': end_date_str
+    }
 
     return render_template(
         'results.html', 
@@ -444,10 +450,22 @@ def warum() -> Any:
 def export_csv() -> Response:
     """Exports the flight search results stored in the session to a CSV file."""
     flights = session.get('search_results', [])
+    search_params = session.get('search_params', {})
 
     if not flights:
         # Redirect to home if there are no results to export
         return redirect(url_for('index'))
+
+    # Create dynamic filename from session data
+    origin = search_params.get('origin', 'NA')
+    destination = search_params.get('destination', 'NA')
+    start_date = search_params.get('start_date', '').replace('-', '')
+    end_date = search_params.get('end_date', '').replace('-', '')
+
+    if start_date and end_date:
+        filename = f"Flights_{origin}-{destination}_{start_date}-{end_date}.csv"
+    else:
+        filename = "flug-report.csv" # Fallback filename
 
     # Use io.StringIO to build the CSV in memory
     output = io.StringIO()
@@ -478,7 +496,7 @@ def export_csv() -> Response:
     return Response(
         output.getvalue(),
         mimetype="text/csv",
-        headers={"Content-disposition": "attachment; filename=flug-report.csv"}
+        headers={"Content-disposition": f"attachment; filename={filename}"}
     )
 
 # --- START APPLICATION ---
