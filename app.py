@@ -295,7 +295,7 @@ def find_flights(token: str, origin: str, destination: str, departure_date: str,
                     'duration': segment.get('duration', '').replace('PT', '').replace('H', 'h ').replace('M', 'm').strip(),
                     'flight': f"{carrier_code} {segment['number']}",
                     'airline_name': airline_codes.get(carrier_code, f"Unbekannte Airline ({carrier_code})"),
-                    'seats': segment.get('numberOfBookableSeats', 99),
+                    'seats': segment.get('numberOfBookableSeats'), # Returns None if not present
                     'price': f"{offer['price']['total']} {offer['price']['currency']}"
                 }
                 found_flights.append(flight_info)
@@ -406,7 +406,10 @@ def search() -> Any:
     max_seats = None
     if max_seats_str and max_seats_str.isdigit():
         max_seats = int(max_seats_str)
-        all_found_flights = [flight for flight in all_found_flights if flight['seats'] < max_seats]
+        all_found_flights = [
+            flight for flight in all_found_flights 
+            if flight.get('seats') is not None and flight.get('seats') < max_seats
+        ]
     
     # Get full names for the results page header
     # The map is created here again, which is a small, acceptable redundancy for cleaner code.

@@ -65,7 +65,7 @@
                 <td>{{ flight.duration }}</td>
                 <td>{{ flight.airline_name }}</td>
                 <td>{{ flight.flight }}</td>
-                <td>{{ flight.seats }}</td>
+                <td>{{ flight.seats if flight.seats is not none else 'k.A.' }}</td>
                 <!-- <td>{{ flight.price }}</td>-->
             </tr>
             {% endfor %}
