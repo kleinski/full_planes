@@ -34,7 +34,7 @@ API_KEY = os.getenv("AMADEUS_API_KEY")
 API_SECRET = os.getenv("AMADEUS_API_SECRET")
 
 # Daily limit for flight search API calls to control costs
-DAILY_API_CALL_LIMIT = 20 
+DAILY_API_CALL_LIMIT = 1000 
 QUOTA_FILE = 'api_quota.json'
 quota_lock = Lock()
 
@@ -159,6 +159,26 @@ def check_and_consume_quota(calls_to_make: int) -> bool:
             # If we can't write, we shouldn't proceed.
             return False
 
+def get_remaining_quota() -> int:
+    """
+    Checks the quota file and returns the number of remaining API calls for the day.
+    This function is read-only and does not consume the quota.
+    """
+    with quota_lock:
+        today_str = date.today().strftime('%Y-%m-%d')
+        try:
+            with open(QUOTA_FILE, 'r') as f:
+                usage = json.load(f)
+            # If the stored date is not today, the quota is fully available.
+            if usage.get('date') != today_str:
+                return DAILY_API_CALL_LIMIT
+            
+            remaining = DAILY_API_CALL_LIMIT - usage.get('count', 0)
+            return max(0, remaining) # Ensure it doesn't go below zero
+        except (FileNotFoundError, json.JSONDecodeError):
+            # If file doesn't exist or is corrupt, the full quota is available.
+            return DAILY_API_CALL_LIMIT
+
 # --- API-FUNKTIONEN ---
 
 def get_amadeus_token() -> Optional[str]:
@@ -269,6 +289,7 @@ def find_flights(token: str, origin: str, destination: str, departure_date: str,
 def index() -> Any:
     """Displays the home page with the search form."""
     error = request.args.get('error')
+    remaining_quota = get_remaining_quota()
 
     today_str = date.today().strftime('%Y-%m-%d')
 
@@ -287,7 +308,8 @@ def index() -> Any:
         error=error, 
         airports=GERMAN_AIRPORTS, 
         destination_airports=DESTINATION_AIRPORTS, 
-        search=search_params)
+        search=search_params,
+        remaining_quota=remaining_quota)
 
 @app.route('/search', methods=['POST'])
 def search() -> Any:

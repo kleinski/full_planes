@@ -41,40 +41,47 @@
 
         <!-- Search Form -->
         <form action="/search" method="post">
-            <label for="origin">Abflughafen:</label>
-            <select id="origin" name="origin" required>
-                <option value="" disabled {% if not search.origin %}selected{% endif %}>Bitte Flughafen auswählen...</option>
-                {% for airport in airports %}
-                    <option value="{{ airport.iata }}" {% if airport.iata == search.origin %}selected{% endif %}>
-                        {{ airport.city }} - {{ airport.name }} ({{ airport.iata }})
-                    </option>
-                {% endfor %}
-            </select>
-
-            <label for="destination">Zielflughafen:</label>
-            <select id="destination" name="destination" required>
-                <option value="" disabled {% if not search.destination %}selected{% endif %}>Bitte Flughafen auswählen...</option>
-                {% for airport in destination_airports %}
-                    {% if airport.iata == '---' %}
-                        <option disabled style="font-weight: bold; background-color: #f0f0f0;">--- {{ airport.name }} ---</option>
-                    {% else %}
-                        <option value="{{ airport.iata }}" {% if airport.iata == search.destination %}selected{% endif %}>
+            <fieldset {% if remaining_quota < 1 %}disabled{% endif %}>
+                <label for="origin">Abflughafen:</label>
+                <select id="origin" name="origin" required>
+                    <option value="" disabled {% if not search.origin %}selected{% endif %}>Bitte Flughafen auswählen...</option>
+                    {% for airport in airports %}
+                        <option value="{{ airport.iata }}" {% if airport.iata == search.origin %}selected{% endif %}>
                             {{ airport.city }} - {{ airport.name }} ({{ airport.iata }})
                         </option>
-                    {% endif %}
-                {% endfor %}
-            </select>
+                    {% endfor %}
+                </select>
 
-            <label for="start_date">Abfragedatum von:</label>
-            <input type="date" id="start_date" name="start_date" required value="{{ search.start_date }}">
+                <label for="destination">Zielflughafen:</label>
+                <select id="destination" name="destination" required>
+                    <option value="" disabled {% if not search.destination %}selected{% endif %}>Bitte Flughafen auswählen...</option>
+                    {% for airport in destination_airports %}
+                        {% if airport.iata == '---' %}
+                            <option disabled style="font-weight: bold; background-color: #f0f0f0;">--- {{ airport.name }} ---</option>
+                        {% else %}
+                            <option value="{{ airport.iata }}" {% if airport.iata == search.destination %}selected{% endif %}>
+                                {{ airport.city }} - {{ airport.name }} ({{ airport.iata }})
+                            </option>
+                        {% endif %}
+                    {% endfor %}
+                </select>
 
-            <label for="end_date">Abfragedatum bis:</label>
-            <input type="date" id="end_date" name="end_date" required value="{{ search.end_date }}">
+                <label for="start_date">Abfragedatum von:</label>
+                <input type="date" id="start_date" name="start_date" required value="{{ search.start_date }}">
 
-            <label for="max_seats">Wie viele Plätze frei:</label>
-            <input type="number" id="max_seats" name="max_seats" placeholder="Weniger als ... Plätze frei" value="{{ search.max_seats }}" min="1">
+                <label for="end_date">Abfragedatum bis:</label>
+                <input type="date" id="end_date" name="end_date" required value="{{ search.end_date }}">
+
+                <label for="max_seats">Wie viele Plätze frei:</label>
+                <input type="number" id="max_seats" name="max_seats" placeholder="Weniger als ... Plätze frei" value="{{ search.max_seats }}" min="1">
+            </fieldset>
             
-            <button type="submit">Flüge suchen</button>
+            {% if remaining_quota < 1 %}
+                <p class="error">Das tägliche API-Limit ist für heute erreicht. Bitte versuchen Sie es morgen erneut.</p>
+                <button type="submit" disabled>API-Limit erreicht</button>
+            {% else %}
+                <button type="submit">Flüge suchen</button>
+            {% endif %}
         </form>
     </div>
 
