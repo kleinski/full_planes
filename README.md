@@ -30,7 +30,10 @@ Ich bin mal gespannt, ob diese App, die lediglich dazu dient, Flugdaten und Ausl
     ```bash
     cp .env.example .env
     ```
-    Öffne die `.env`-Datei und ersetze die Platzhalter.
+    Öffne die `.env`-Datei und ersetze die Platzhalter. Für den `FLASK_SECRET_KEY` kannst du mit folgendem Befehl einen sicheren Schlüssel generieren:
+    ```bash
+    python -c 'import secrets; print(secrets.token_hex(16))'
+    ```
 
 ## Nutzung
 

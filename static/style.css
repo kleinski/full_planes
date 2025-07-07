@@ -1,0 +1,95 @@
+/* General Body and Layout */
+body { 
+    font-family: sans-serif; 
+    margin: 0; 
+    padding: 0;
+    background-color: #f4f4f9; 
+    display: flex; 
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+.content-wrapper {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+}
+
+.container { 
+    padding: 2em; 
+    width: 100%; 
+}
+
+h1 { color: #333; }
+
+/* Action Buttons / Links */
+.action-buttons { margin-bottom: 1.5em; }
+.action-link {
+    display: inline-block;
+    padding: 10px 15px;
+    background-color: #007bff;
+    color: white !important; /* Override default link color */
+    border-radius: 4px;
+    text-decoration: none;
+    font-weight: bold;
+    margin-right: 10px;
+}
+.action-link:hover {
+    background-color: #0056b3;
+    text-decoration: none;
+}
+.action-link.export {
+    background-color: #28a745; /* Green for export */
+}
+.action-link.export:hover {
+    background-color: #218838;
+}
+
+a { color: #007bff; text-decoration: none; font-weight: bold; }
+a:hover { text-decoration: underline; }
+
+/* Footer */
+footer {
+    text-align: center;
+    padding: 1.5em;
+    margin-top: auto;
+    background-color: #f1f1f1;
+    border-top: 1px solid #ddd;
+    width: 100%;
+}
+
+footer a {
+    color: #333;
+    text-decoration: none;
+    margin: 0 10px;
+}
+
+footer a:hover {
+    text-decoration: underline;
+}
+
+/* Form Styles (from index.html) */
+form { display: flex; flex-direction: column; gap: 15px; }
+label { font-weight: bold; margin-bottom: 5px; }
+input[type="text"], input[type="date"], input[type="number"], select { padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 16px; width: 100%; box-sizing: border-box; }
+button { padding: 12px; background-color: #007bff; color: white; border: none; border-radius: 4px; font-size: 16px; cursor: pointer; }
+button:not(:disabled):hover { background-color: #0056b3; }
+button:disabled { background-color: #cccccc; cursor: not-allowed; }
+.error { color: #d9534f; font-weight: bold; margin-top: 10px; }
+
+/* Loader Styles (from index.html) */
+.loader-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(255, 255, 255, 0.85); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; }
+.loader { border: 8px solid #f3f3f3; border-top: 8px solid #007bff; border-radius: 50%; width: 60px; height: 60px; animation: spin 1s linear infinite; }
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+/* Table Styles (from results.html) */
+.results-table { width: 100%; border-collapse: collapse; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+.results-table th, .results-table td { padding: 12px; border: 1px solid #ddd; text-align: left; white-space: nowrap; }
+.results-table thead { background-color: #007bff; color: white; position: sticky; top: 0; }
+.results-table thead th { cursor: pointer; user-select: none; }
+.results-table thead th:hover { background-color: #0056b3; }
+.results-table tbody tr:nth-child(even) { background-color: #f2f2f2; }
+.results-table tbody tr:hover { background-color: #ddd; }
+.th-sort-asc::after, .th-sort-desc::after { content: ''; display: inline-block; margin-left: 0.5em; border: 4px solid transparent; }
+.th-sort-asc::after { border-bottom-color: white; }
+.th-sort-desc::after { border-top-color: white; }

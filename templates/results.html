@@ -5,21 +5,7 @@
 {% block container_width %}1200px{% endblock %}
 
 {% block head_extra %}
-    <style>
-        h1 { color: #333; }
-        table { width: 100%; border-collapse: collapse; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        th, td { padding: 12px; border: 1px solid #ddd; text-align: left; white-space: nowrap; }
-        thead { background-color: #007bff; color: white; position: sticky; top: 0; }
-        thead th { cursor: pointer; user-select: none; }
-        thead th:hover { background-color: #0056b3; }
-        tbody tr:nth-child(even) { background-color: #f2f2f2; }
-        tbody tr:hover { background-color: #ddd; }
-        .th-sort-asc::after, .th-sort-desc::after { content: ''; display: inline-block; margin-left: 0.5em; border: 4px solid transparent; }
-        .th-sort-asc::after { border-bottom-color: white; }
-        .th-sort-desc::after { border-top-color: white; }
-        a { color: #007bff; text-decoration: none; font-weight: bold; }
-        a:hover { text-decoration: underline; }
-    </style>
+    <!-- Specific styles for this page can go here if needed -->
 {% endblock %}
 
 {% block content %}
@@ -44,11 +30,13 @@
         {% endif %}
         </strong>
     </p>
+    <div class="action-buttons">
+        <a href="{{ url_for('export_csv') }}" class="action-link export">Als CSV exportieren</a>
+        <a href="{{ url_for('index', origin=origin, destination=destination, start_date=start_date, end_date=end_date, max_seats=max_seats) }}" class="action-link">Neue Suche starten</a>
+    </div>
     {% endif %}
-    <!-- Link to start a new search, pre-filled with current parameters -->
-    <p><a href="{{ url_for('index', origin=origin, destination=destination, start_date=start_date, end_date=end_date, max_seats=max_seats) }}">Neue Suche starten</a></p>
     
-    <table>
+    <table class="results-table">
         <!-- Table Header -->
         <thead>
             <tr>

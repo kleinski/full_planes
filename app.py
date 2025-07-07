@@ -12,16 +12,18 @@ the Free Software Foundation, either version 3 of the License, or
 '''
 
 import concurrent.futures
-import json
 import os
 import time
 from datetime import date, datetime, timedelta
+import json
+import io
+import csv
 from threading import Lock
 from typing import Any, Dict, List, Optional
 
 import requests
 from dotenv import load_dotenv
-from flask import Flask, redirect, render_template, request, url_for
+from flask import Flask, Response, redirect, render_template, request, session, url_for
 
 load_dotenv()
 
@@ -32,6 +34,10 @@ app = Flask(__name__)
 # Credentials are loaded from environment variables.
 API_KEY = os.getenv("AMADEUS_API_KEY")
 API_SECRET = os.getenv("AMADEUS_API_SECRET")
+app.secret_key = os.getenv("FLASK_SECRET_KEY")
+if not app.secret_key:
+    print("!!! WARNING: FLASK_SECRET_KEY is not set. Sessions are not secure.")
+    app.secret_key = 'dev-secret-key-for-testing-only' # Fallback for development
 
 # Daily limit for flight search API calls to control costs
 DAILY_API_CALL_LIMIT = 1000 
@@ -381,6 +387,9 @@ def search() -> Any:
     destination_full = airports_map.get(destination, destination)
     all_found_flights.sort(key=lambda x: (x['date'], x['departure_time']))
 
+    # Store results in session for CSV export
+    session['search_results'] = all_found_flights
+
     return render_template(
         'results.html', 
         flights=all_found_flights,
@@ -402,6 +411,47 @@ def impressum() -> Any:
 def warum() -> Any:
     """Displays the 'Why?' page."""
     return render_template('warum.html')
+
+@app.route('/export/csv')
+def export_csv() -> Response:
+    """Exports the flight search results stored in the session to a CSV file."""
+    flights = session.get('search_results', [])
+
+    if not flights:
+        # Redirect to home if there are no results to export
+        return redirect(url_for('index'))
+
+    # Use io.StringIO to build the CSV in memory
+    output = io.StringIO()
+    writer = csv.writer(output)
+
+    # Write header
+    header = [
+        'Datum', 'Abflug', 'Ankunft', 'Von', 'Nach', 'Dauer', 
+        'Fluggesellschaft', 'Flugnr.', 'Freie Plaetze'
+    ]
+    writer.writerow(header)
+
+    # Write data rows
+    for flight in flights:
+        writer.writerow([
+            flight.get('date'),
+            flight.get('departure_time'),
+            flight.get('arrival_time'),
+            flight.get('from_full'),
+            flight.get('to_full'),
+            flight.get('duration'),
+            flight.get('airline_name'),
+            flight.get('flight'),
+            flight.get('seats')
+        ])
+
+    # Create a Flask Response object
+    return Response(
+        output.getvalue(),
+        mimetype="text/csv",
+        headers={"Content-disposition": "attachment; filename=flug-report.csv"}
+    )
 
 # --- START APPLICATION ---
 if __name__ == '__main__':
