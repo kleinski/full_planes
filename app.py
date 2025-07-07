@@ -12,9 +12,11 @@ the Free Software Foundation, either version 3 of the License, or
 '''
 
 import concurrent.futures
+import json
 import os
 import time
 from datetime import date, datetime, timedelta
+from threading import Lock
 from typing import Any, Dict, List, Optional
 
 import requests
@@ -31,8 +33,10 @@ app = Flask(__name__)
 API_KEY = os.getenv("AMADEUS_API_KEY")
 API_SECRET = os.getenv("AMADEUS_API_SECRET")
 
-# Pause between API requests in seconds to avoid rate limiting
-REQUEST_DELAY_SECONDS = 1.0 
+# Daily limit for flight search API calls to control costs
+DAILY_API_CALL_LIMIT = 20 
+QUOTA_FILE = 'api_quota.json'
+quota_lock = Lock()
 
 # Global cache for the Amadeus token
 amadeus_token_cache: Dict[str, Any] = {
@@ -113,6 +117,47 @@ AIRLINE_CODES: Dict[str, str] = {
     'A9': 'Georgian Airways',
     'SU': 'Aeroflot' # For SVO
 }
+
+# --- QUOTA MANAGEMENT ---
+
+def check_and_consume_quota(calls_to_make: int) -> bool:
+    """
+    Checks if the requested number of API calls is within the daily limit.
+    If so, it consumes the quota and returns True. Otherwise, returns False.
+    This function is thread-safe.
+    """
+    with quota_lock:
+        today_str = date.today().strftime('%Y-%m-%d')
+        usage = {'date': today_str, 'count': 0}
+
+        try:
+            with open(QUOTA_FILE, 'r') as f:
+                usage = json.load(f)
+            # Reset count if it's a new day
+            if usage.get('date') != today_str:
+                print("New day, resetting API call quota.")
+                usage = {'date': today_str, 'count': 0}
+        except (FileNotFoundError, json.JSONDecodeError):
+            # If file doesn't exist or is corrupt, create a new one.
+            print("Quota file not found or corrupt, creating a new one.")
+            pass # usage is already initialized for today
+
+        if usage['count'] + calls_to_make > DAILY_API_CALL_LIMIT:
+            print(f"Daily API call limit reached. Current count: {usage['count']}, tried to add: {calls_to_make}")
+            return False
+        
+        # Consume the quota
+        usage['count'] += calls_to_make
+        
+        try:
+            with open(QUOTA_FILE, 'w') as f:
+                json.dump(usage, f)
+            print(f"Consumed {calls_to_make} API calls. New daily count: {usage['count']}")
+            return True
+        except IOError as e:
+            print(f"Error writing to quota file: {e}")
+            # If we can't write, we shouldn't proceed.
+            return False
 
 # --- API-FUNKTIONEN ---
 
@@ -272,6 +317,13 @@ def search() -> Any:
     delta = end_date - start_date
     if delta.days > 6:
         return redirect(url_for('index', error="The date range cannot exceed 7 days."))
+
+    # --- QUOTA CHECK ---
+    # Check if the number of required searches exceeds the daily API call limit.
+    num_searches = delta.days + 1
+    if not check_and_consume_quota(num_searches):
+        return redirect(url_for('index', error=f"Das tägliche API-Limit von {DAILY_API_CALL_LIMIT} Aufrufen wurde erreicht. Bitte versuchen Sie es morgen erneut."))
+    # --- END QUOTA CHECK ---
 
     token = get_amadeus_token()
     if not token:
