@@ -11,6 +11,7 @@ the Free Software Foundation, either version 3 of the License, or
 (at your option) any later version.
 '''
 
+import concurrent.futures
 import os
 import time
 from datetime import date, datetime, timedelta
@@ -167,36 +168,55 @@ def find_flights(token: str, origin: str, destination: str, departure_date: str,
         'adults': 1,
         'nonStop': 'true',
     }
-    found_flights = []
-    try:
-        response = requests.get(AMADEUS_SEARCH_URL, headers=headers, params=params)
-        if response.status_code == 400: # API returns 400 if no offers are found
+
+    # Retry logic with exponential backoff for handling rate limits (429 errors)
+    for attempt in range(3):
+        try:
+            response = requests.get(AMADEUS_SEARCH_URL, headers=headers, params=params)
+
+            # If we are being rate-limited, wait and try again.
+            if response.status_code == 429:
+                wait_time = 1 * (2 ** attempt) # Exponential backoff: 1s, 2s, 4s
+                print(f"Rate limit hit for {origin}->{destination} on {departure_date}. Retrying in {wait_time}s... (Attempt {attempt + 1}/3)")
+                time.sleep(wait_time)
+                continue
+
+            # API returns 400 if no offers are found, this is not an error
+            if response.status_code == 400:
+                return []
+
+            # For other errors, raise an exception to be caught below.
+            response.raise_for_status()
+
+            # If successful, process the data and return
+            found_flights = []
+            flight_offers = response.json().get('data', [])
+            for offer in flight_offers:
+                segment = offer['itineraries'][0]['segments'][0]
+                carrier_code = segment['carrierCode']
+                flight_info = {
+                    'date': departure_date,
+                    'departure_time': segment['departure']['at'].split('T')[1],
+                    'arrival_time': segment['arrival']['at'].split('T')[1],
+                    'from': origin, 'to': destination,
+                    'from_full': airports_map.get(origin, origin), 'to_full': airports_map.get(destination, destination),
+                    'duration': segment.get('duration', '').replace('PT', '').replace('H', 'h ').replace('M', 'm').strip(),
+                    'flight': f"{carrier_code} {segment['number']}",
+                    'airline_name': airline_codes.get(carrier_code, f"Unbekannte Airline ({carrier_code})"),
+                    'seats': segment.get('numberOfBookableSeats', 99),
+                    'price': f"{offer['price']['total']} {offer['price']['currency']}"
+                }
+                found_flights.append(flight_info)
             return found_flights
-        response.raise_for_status()
-        flight_offers = response.json().get('data', [])
 
-        for offer in flight_offers:
-            segment = offer['itineraries'][0]['segments'][0]
-            carrier_code = segment['carrierCode']
+        except requests.exceptions.RequestException as e:
+            # For connection errors, etc., log the error and stop retrying for this request.
+            print(f"API request failed for {origin}->{destination} on {departure_date}: {e}")
+            break # Exit the retry loop
 
-            flight_info = {
-                'date': departure_date,
-                'departure_time': segment['departure']['at'].split('T')[1],
-                'arrival_time': segment['arrival']['at'].split('T')[1],
-                'from': origin,
-                'to': destination,
-                'from_full': airports_map.get(origin, origin),
-                'to_full': airports_map.get(destination, destination),
-                'duration': segment.get('duration', '').replace('PT', '').replace('H', 'h ').replace('M', 'm').strip(),
-                'flight': f"{carrier_code} {segment['number']}",
-                'airline_name': airline_codes.get(carrier_code, f"Unbekannte Airline ({carrier_code})"),
-                'seats': segment.get('numberOfBookableSeats', 99),
-                'price': f"{offer['price']['total']} {offer['price']['currency']}"
-            }
-            found_flights.append(flight_info)
-    except requests.exceptions.RequestException as e:
-        print(f"API request failed for {origin}->{destination} on {departure_date}: {e}")
-    return found_flights
+    # If all retries fail, return an empty list for this day's search.
+    print(f"All retries failed for {origin}->{destination} on {departure_date}. Giving up.")
+    return []
 
 # --- FLASK ROUTEN ---
 
@@ -258,15 +278,21 @@ def search() -> Any:
         return redirect(url_for('index', error="Could not get API token. Check your credentials and server logs."))
 
     all_airports = GERMAN_AIRPORTS + DESTINATION_AIRPORTS
+    
+    # Use a ThreadPoolExecutor to run API requests in parallel
     all_found_flights = []
-    for day_offset in range(delta.days + 1):
-        current_date = start_date + timedelta(days=day_offset)
-        current_date_str = current_date.strftime("%Y-%m-%d")
-        
-        print(f"Searching: {origin} -> {destination} on {current_date_str}")
-        flights = find_flights(token, origin, destination, current_date_str, all_airports, AIRLINE_CODES)
-        all_found_flights.extend(flights)
-        time.sleep(REQUEST_DELAY_SECONDS)
+    # Set max_workers to a reasonable number to avoid hitting API rate limits.
+    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+        # Create a future for each day's flight search
+        future_to_date = {
+            executor.submit(find_flights, token, origin, destination, (start_date + timedelta(days=i)).strftime("%Y-%m-%d"), all_airports, AIRLINE_CODES): (start_date + timedelta(days=i))
+            for i in range(delta.days + 1)
+        }
+
+        for future in concurrent.futures.as_completed(future_to_date):
+            date_of_future = future_to_date[future]
+            print(f"Completed search for {origin} -> {destination} on {date_of_future.strftime('%Y-%m-%d')}")
+            all_found_flights.extend(future.result())
     
     # Filter flights based on the optional seat limit
     max_seats = None
