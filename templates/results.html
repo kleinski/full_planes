@@ -5,7 +5,16 @@
 {% block container_width %}1200px{% endblock %}
 
 {% block head_extra %}
-    <!-- Specific styles for this page can go here if needed -->
+    <style>
+        .warning-box {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeeba;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+    </style>
 {% endblock %}
 
 {% block content %}
@@ -20,6 +29,12 @@
         {% endif %}
     </p>
     
+    {% if is_test_api %}
+    <div class="warning-box">
+        <strong>Wichtiger Hinweis:</strong> Diese Anwendung nutzt die <strong>Test-API</strong> von Amadeus. Die angezeigten Flugdaten sind daher <strong>nur teilweise real</strong>. Die tatsächliche Belegung lässt sich über die Test-API nicht ermitteln.
+    </div>
+    {% endif %}
+
     {% if flights %}
     <p>
         <strong>

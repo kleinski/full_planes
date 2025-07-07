@@ -72,6 +72,9 @@ amadeus_token_cache: Dict[str, Any] = {
 AMADEUS_AUTH_URL = "https://test.api.amadeus.com/v1/security/oauth2/token"
 AMADEUS_SEARCH_URL = "https://test.api.amadeus.com/v2/shopping/flight-offers"
 
+# Flag to indicate if the test environment is being used
+IS_TEST_API = "test.api.amadeus.com" in AMADEUS_SEARCH_URL
+
 # List of German departure airports for the dropdown menu
 GERMAN_AIRPORTS: List[Dict[str, str]] = [
     {'city': 'Berlin', 'name': 'Flughafen Berlin Brandenburg "Willy Brandt"', 'iata': 'BER'},
@@ -436,7 +439,8 @@ def search() -> Any:
         destination_full=destination_full,
         start_date=start_date_str,
         end_date=end_date_str,
-        max_seats=max_seats_str
+        max_seats=max_seats_str,
+        is_test_api=IS_TEST_API
     )
 
 @app.route('/impressum')
