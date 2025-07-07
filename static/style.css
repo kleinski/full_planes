@@ -93,3 +93,23 @@ button:disabled { background-color: #cccccc; cursor: not-allowed; }
 .th-sort-asc::after, .th-sort-desc::after { content: ''; display: inline-block; margin-left: 0.5em; border: 4px solid transparent; }
 .th-sort-asc::after { border-bottom-color: white; }
 .th-sort-desc::after { border-top-color: white; }
+
+/* Error Page Styles */
+.error-page-message {
+    color: #721c24;
+    font-weight: bold;
+    padding: 1em;
+    border: 1px solid #f5c6cb;
+    background-color: #f8d7da;
+    border-radius: 4px;
+}
+.error-details {
+    margin-top: 2em;
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    padding: 1em;
+    border-radius: 4px;
+    font-family: monospace;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}

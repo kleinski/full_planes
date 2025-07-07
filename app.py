@@ -12,18 +12,19 @@ the Free Software Foundation, either version 3 of the License, or
 '''
 
 import concurrent.futures
+import csv
+import io
+import json
 import os
 import time
 from datetime import date, datetime, timedelta
-import json
-import io
-import csv
 from threading import Lock
 from typing import Any, Dict, List, Optional
 
 import requests
 from dotenv import load_dotenv
-from flask import Flask, Response, redirect, render_template, request, session, url_for
+from flask import (Flask, Response, redirect, render_template, request,
+                   session, url_for)
 
 load_dotenv()
 
@@ -38,6 +39,11 @@ app.secret_key = os.getenv("FLASK_SECRET_KEY")
 if not app.secret_key:
     print("!!! WARNING: FLASK_SECRET_KEY is not set. Sessions are not secure.")
     app.secret_key = 'dev-secret-key-for-testing-only' # Fallback for development
+
+# --- Custom Exceptions ---
+class AmadeusApiError(Exception):
+    """Custom exception for Amadeus API related errors."""
+    pass
 
 # Daily limit for flight search API calls to control costs
 DAILY_API_CALL_LIMIT = 1000 
@@ -221,8 +227,8 @@ def get_amadeus_token() -> Optional[str]:
         print(f"Successfully obtained and cached a new Amadeus API token, expires in {expires_in} seconds.")
         return access_token
     except requests.exceptions.RequestException as e:
-        print(f"Error getting Amadeus token: {e}")
-        return None
+        print(f"Fatal error getting Amadeus token: {e}")
+        raise AmadeusApiError(f"Fehler bei der Authentifizierung mit der Amadeus API. Bitte überprüfen Sie die Server-Logs. Details: {e}")
 
 def find_flights(token: str, origin: str, destination: str, departure_date: str, all_airports: List[Dict[str, str]], airline_codes: Dict[str, str]) -> List[Dict[str, Any]]:
     """
@@ -247,6 +253,9 @@ def find_flights(token: str, origin: str, destination: str, departure_date: str,
 
             # If we are being rate-limited, wait and try again.
             if response.status_code == 429:
+                if attempt == 2: # Last attempt failed
+                    print(f"Giving up on {origin}->{destination} for {departure_date} after 3 failed attempts due to rate limiting.")
+                    raise AmadeusApiError("Das API-Ratenlimit wurde auch nach mehreren Versuchen überschritten. Die Suche wurde abgebrochen.")
                 wait_time = 1 * (2 ** attempt) # Exponential backoff: 1s, 2s, 4s
                 print(f"Rate limit hit for {origin}->{destination} on {departure_date}. Retrying in {wait_time}s... (Attempt {attempt + 1}/3)")
                 time.sleep(wait_time)
@@ -282,12 +291,10 @@ def find_flights(token: str, origin: str, destination: str, departure_date: str,
 
         except requests.exceptions.RequestException as e:
             # For connection errors, etc., log the error and stop retrying for this request.
-            print(f"API request failed for {origin}->{destination} on {departure_date}: {e}")
-            break # Exit the retry loop
+            print(f"Fatal API request failed for {origin}->{destination} on {departure_date}: {e}")
+            raise AmadeusApiError(f"Die Amadeus API ist aufgrund eines Verbindungsfehlers nicht erreichbar. Details: {e}")
 
-    # If all retries fail, return an empty list for this day's search.
-    print(f"All retries failed for {origin}->{destination} on {departure_date}. Giving up.")
-    return []
+    raise AmadeusApiError(f"Unbekannter Fehler bei der Flugsuche für {origin}->{destination} am {departure_date}.")
 
 # --- FLASK ROUTEN ---
 
@@ -353,26 +360,35 @@ def search() -> Any:
         return redirect(url_for('index', error=f"Das tägliche API-Limit von {DAILY_API_CALL_LIMIT} Aufrufen wurde erreicht. Bitte versuchen Sie es morgen erneut."))
     # --- END QUOTA CHECK ---
 
-    token = get_amadeus_token()
-    if not token:
-        return redirect(url_for('index', error="Could not get API token. Check your credentials and server logs."))
+    try:
+        token = get_amadeus_token()
+        if not token:
+            # This case should now be handled by the exception in get_amadeus_token, but as a fallback:
+            raise AmadeusApiError("Konnte keinen API-Token erhalten. Überprüfen Sie Ihre Credentials und die Server-Logs.")
 
-    all_airports = GERMAN_AIRPORTS + DESTINATION_AIRPORTS
-    
-    # Use a ThreadPoolExecutor to run API requests in parallel
-    all_found_flights = []
-    # Set max_workers to a reasonable number to avoid hitting API rate limits.
-    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
-        # Create a future for each day's flight search
-        future_to_date = {
-            executor.submit(find_flights, token, origin, destination, (start_date + timedelta(days=i)).strftime("%Y-%m-%d"), all_airports, AIRLINE_CODES): (start_date + timedelta(days=i))
-            for i in range(delta.days + 1)
-        }
+        all_airports = GERMAN_AIRPORTS + DESTINATION_AIRPORTS
+        
+        # Use a ThreadPoolExecutor to run API requests in parallel
+        all_found_flights = []
+        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+            future_to_date = {
+                executor.submit(find_flights, token, origin, destination, (start_date + timedelta(days=i)).strftime("%Y-%m-%d"), all_airports, AIRLINE_CODES): (start_date + timedelta(days=i))
+                for i in range(delta.days + 1)
+            }
 
-        for future in concurrent.futures.as_completed(future_to_date):
-            date_of_future = future_to_date[future]
-            print(f"Completed search for {origin} -> {destination} on {date_of_future.strftime('%Y-%m-%d')}")
-            all_found_flights.extend(future.result())
+            for future in concurrent.futures.as_completed(future_to_date):
+                try:
+                    all_found_flights.extend(future.result())
+                except Exception as exc:
+                    print(f'A search task generated an exception: {exc}')
+                    executor.shutdown(wait=False, cancel_futures=True)
+                    raise exc # Re-raise to be caught by the outer try-except
+
+    except AmadeusApiError as e:
+        return render_template('error.html', error_message=str(e), is_debug=app.debug)
+    except Exception as e:
+        print(f"An unexpected error occurred during search: {e}")
+        return render_template('error.html', error_message="Ein unerwarteter interner Fehler ist aufgetreten.", is_debug=app.debug)
     
     # Filter flights based on the optional seat limit
     max_seats = None
