@@ -54,8 +54,8 @@ Es werden ausschließlich **Linienflüge** abgefragt, keine Charterflüge, die h
 
 Diese Anwendung richtet sich gegen die versuchte Kriminialisierung von menschlicher Solidarität, nicht gegen Abschiebungen an sich.
 
-## GPL
+## Lizenz
 
-Lizenz: Diese App ist lizenziert unter der GPL 3.0 Lizenz. Sie darf kopiert, verändert und weitergegeben, aber nicht kommerziell verwendet werden.
+Dieses Programm ist freie Software. Sie können es unter den Bedingungen der GNU General Public License, wie von der Free Software Foundation veröffentlicht, weitergeben und/oder modifizieren, entweder gemäß Version 3 der Lizenz oder (nach Ihrer Wahl) jeder späteren Version.
 
 *Erstellt: 2025-07-05*

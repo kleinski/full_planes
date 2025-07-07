@@ -14,6 +14,7 @@ the Free Software Foundation, either version 3 of the License, or
 import os
 import time
 from datetime import date, datetime, timedelta
+from typing import Any, Dict, List, Optional
 
 import requests
 from dotenv import load_dotenv
@@ -33,7 +34,7 @@ API_SECRET = os.getenv("AMADEUS_API_SECRET")
 REQUEST_DELAY_SECONDS = 1.0 
 
 # Global cache for the Amadeus token
-amadeus_token_cache = {
+amadeus_token_cache: Dict[str, Any] = {
     'token': None,
     'expires_at': 0
 }
@@ -43,7 +44,7 @@ AMADEUS_AUTH_URL = "https://test.api.amadeus.com/v1/security/oauth2/token"
 AMADEUS_SEARCH_URL = "https://test.api.amadeus.com/v2/shopping/flight-offers"
 
 # List of German departure airports for the dropdown menu
-GERMAN_AIRPORTS = [
+GERMAN_AIRPORTS: List[Dict[str, str]] = [
     {'city': 'Berlin', 'name': 'Flughafen Berlin Brandenburg "Willy Brandt"', 'iata': 'BER'},
     {'city': 'Bremen', 'name': 'Bremen Airport Hans Koschnick', 'iata': 'BRE'},
     {'city': 'Dortmund', 'name': 'Dortmund Airport 21', 'iata': 'DTM'},
@@ -70,7 +71,7 @@ GERMAN_AIRPORTS = [
 ]
 
 # List of selectable destination airports
-DESTINATION_AIRPORTS = [
+DESTINATION_AIRPORTS: List[Dict[str, str]] = [
     # Separator for visual grouping in the dropdown
     {'iata': '---', 'name': 'Schengen-Raum'},
     {'city': 'Wien', 'name': 'Flughafen Wien-Schwechat', 'iata': 'VIE'},
@@ -91,7 +92,7 @@ DESTINATION_AIRPORTS = [
 ]
 
 # Mapping for common airline IATA codes to names
-AIRLINE_CODES = {
+AIRLINE_CODES: Dict[str, str] = {
     'LH': 'Lufthansa',
     'EW': 'Eurowings',
     'DE': 'Condor',
@@ -114,7 +115,7 @@ AIRLINE_CODES = {
 
 # --- API-FUNKTIONEN ---
 
-def get_amadeus_token():
+def get_amadeus_token() -> Optional[str]:
     """
     Fetches an OAuth2 Access Token from the Amadeus API, using a simple cache
     to avoid requesting a new token on every search.
@@ -151,13 +152,12 @@ def get_amadeus_token():
         print(f"Error getting Amadeus token: {e}")
         return None
 
-def find_flights(token, origin, destination, departure_date, all_airports, airline_codes):
+def find_flights(token: str, origin: str, destination: str, departure_date: str, all_airports: List[Dict[str, str]], airline_codes: Dict[str, str]) -> List[Dict[str, Any]]:
     """
     Searches for flights, enriches the data with full names, and returns the found offers.
     """
     # Create a lookup dictionary for full airport names for enrichment
     airports_map = {airport['iata']: f"{airport['city']} – {airport['name']}" for airport in all_airports if 'city' in airport}
-
 
     headers = {'Authorization': f'Bearer {token}'}
     params = {
@@ -201,7 +201,7 @@ def find_flights(token, origin, destination, departure_date, all_airports, airli
 # --- FLASK ROUTEN ---
 
 @app.route('/')
-def index():
+def index() -> Any:
     """Displays the home page with the search form."""
     error = request.args.get('error')
 
@@ -225,19 +225,24 @@ def index():
         search=search_params)
 
 @app.route('/search', methods=['POST'])
-def search():
+def search() -> Any:
     """Processes the form data, searches for flights, and displays the results."""
-    origin = request.form.get('origin').upper().strip() # type: ignore
-    destination = request.form.get('destination').upper().strip() # type: ignore
+    origin_val = request.form.get('origin')
+    destination_val = request.form.get('destination')
     start_date_str = request.form.get('start_date')
     end_date_str = request.form.get('end_date')
     max_seats_str = request.form.get('max_seats')
 
-    if not all([origin, destination, start_date_str, end_date_str]):
+    if not all([origin_val, destination_val, start_date_str, end_date_str]):
         return redirect(url_for('index', error="Bitte alle Felder ausfüllen."))
+
+    # Now we know the values are not None, we can safely process them.
+    origin = origin_val.upper().strip()
+    destination = destination_val.upper().strip()
+
     try:
-        start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date() # type: ignore
-        end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date() # type: ignore
+        start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+        end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
     except ValueError:
         return redirect(url_for('index', error="Invalid date format."))
 
@@ -289,7 +294,7 @@ def search():
     )
 
 @app.route('/impressum')
-def impressum():
+def impressum() -> Any:
     """Displays the legal notice page."""
     return render_template('impressum.html')
 
