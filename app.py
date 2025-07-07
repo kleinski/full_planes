@@ -298,6 +298,11 @@ def impressum() -> Any:
     """Displays the legal notice page."""
     return render_template('impressum.html')
 
+@app.route('/warum')
+def warum() -> Any:
+    """Displays the 'Why?' page."""
+    return render_template('warum.html')
+
 # --- START APPLICATION ---
 if __name__ == '__main__':
     if not API_KEY or not API_SECRET:

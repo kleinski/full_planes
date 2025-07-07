@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block title %}Warum?{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Warum diese Seite?</h1>
+
+    <p>
+        Inspiriert durch den Tagesspiegel-Artikel <a href="https://www.tagesspiegel.de/berlin/missbrauch-von-vertraulichen-informationen-berliner-cdu-will-fluchtlingsaktivisten-bestrafen-die-abschiebungen-verraten-13973525.html" target="_blank" rel="noopener noreferrer">"Missbrauch von vertraulichen Informationen: Berliner CDU will Flüchtlingsaktivisten bestrafen, die Abschiebungen verraten"</a>.
+    </p>
+
+    <p>
+        Da die CDU Berlin Menschen bestrafen will, die Flugdetails von Abschiebungen verraten, zeigt diese Anwendung, mit welch geringem Aufwand (kein halber Tag Programmierung mit Unterstützung durch eine KI) sich potenziell für Abschiebungen genutzte Flüge in Deutschland ermitteln lassen.
+    </p>
+
+    <p>
+        Ich mal gespannt, ob diese App, die lediglich dazu dient, Flugdaten und Auslastungen von Linienflügen zügig zu ermitteln, in den Augen von Stephan Weh und der Berliner CDU schon kriminell ist ;-)
+    </p>
+    <p><a href="{{ url_for('index') }}">Zurück zur Startseite</a></p>
+</div>
+{% endblock %}
