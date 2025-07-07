@@ -151,8 +151,14 @@ def get_amadeus_token():
         print(f"Error getting Amadeus token: {e}")
         return None
 
-def find_flights(token, origin, destination, departure_date):
-    """Searches for flights and returns the found offers."""
+def find_flights(token, origin, destination, departure_date, all_airports, airline_codes):
+    """
+    Searches for flights, enriches the data with full names, and returns the found offers.
+    """
+    # Create a lookup dictionary for full airport names for enrichment
+    airports_map = {airport['iata']: f"{airport['city']} – {airport['name']}" for airport in all_airports if 'city' in airport}
+
+
     headers = {'Authorization': f'Bearer {token}'}
     params = {
         'originLocationCode': origin,
@@ -171,14 +177,19 @@ def find_flights(token, origin, destination, departure_date):
 
         for offer in flight_offers:
             segment = offer['itineraries'][0]['segments'][0]
+            carrier_code = segment['carrierCode']
+
             flight_info = {
                 'date': departure_date,
                 'departure_time': segment['departure']['at'].split('T')[1],
                 'arrival_time': segment['arrival']['at'].split('T')[1],
                 'from': origin,
                 'to': destination,
+                'from_full': airports_map.get(origin, origin),
+                'to_full': airports_map.get(destination, destination),
                 'duration': segment.get('duration', '').replace('PT', '').replace('H', 'h ').replace('M', 'm').strip(),
-                'flight': f"{segment['carrierCode']} {segment['number']}",
+                'flight': f"{carrier_code} {segment['number']}",
+                'airline_name': airline_codes.get(carrier_code, f"Unbekannte Airline ({carrier_code})"),
                 'seats': segment.get('numberOfBookableSeats', 99),
                 'price': f"{offer['price']['total']} {offer['price']['currency']}"
             }
@@ -241,13 +252,14 @@ def search():
     if not token:
         return redirect(url_for('index', error="Could not get API token. Check your credentials and server logs."))
 
+    all_airports = GERMAN_AIRPORTS + DESTINATION_AIRPORTS
     all_found_flights = []
     for day_offset in range(delta.days + 1):
         current_date = start_date + timedelta(days=day_offset)
         current_date_str = current_date.strftime("%Y-%m-%d")
         
         print(f"Searching: {origin} -> {destination} on {current_date_str}")
-        flights = find_flights(token, origin, destination, current_date_str)
+        flights = find_flights(token, origin, destination, current_date_str, all_airports, AIRLINE_CODES)
         all_found_flights.extend(flights)
         time.sleep(REQUEST_DELAY_SECONDS)
     
@@ -257,17 +269,9 @@ def search():
         max_seats = int(max_seats_str)
         all_found_flights = [flight for flight in all_found_flights if flight['seats'] < max_seats]
     
-    # Create a lookup dictionary for full airport names
-    airports_map = {airport['iata']: f"{airport['city']} – {airport['name']}" for airport in GERMAN_AIRPORTS + DESTINATION_AIRPORTS if 'city' in airport}
-
-    # Enrich flight data with full airport and airline names
-    for flight in all_found_flights:
-        flight['from_full'] = airports_map.get(flight['from'], flight['from'])
-        flight['to_full'] = airports_map.get(flight['to'], flight['to'])
-        carrier_code = flight['flight'].split(' ')[0]
-        flight['airline_name'] = AIRLINE_CODES.get(carrier_code, f"Unbekannte Airline ({carrier_code})")
-
     # Get full names for the results page header
+    # The map is created here again, which is a small, acceptable redundancy for cleaner code.
+    airports_map = {airport['iata']: f"{airport['city']} – {airport['name']}" for airport in all_airports if 'city' in airport}
     origin_full = airports_map.get(origin, origin)
     destination_full = airports_map.get(destination, destination)
     all_found_flights.sort(key=lambda x: (x['date'], x['departure_time']))
