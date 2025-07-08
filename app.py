@@ -58,7 +58,7 @@ class AmadeusApiError(Exception):
     pass
 
 # Daily limit for flight search API calls to control costs
-DAILY_API_CALL_LIMIT = 1000 
+MONTHLY_API_CALL_LIMIT = 300
 QUOTA_FILE = 'api_quota.json'
 quota_lock = Lock()
 
@@ -154,23 +154,23 @@ def check_and_consume_quota(calls_to_make: int) -> bool:
     This function is thread-safe.
     """
     with quota_lock:
-        today_str = date.today().strftime('%Y-%m-%d')
-        usage = {'date': today_str, 'count': 0}
+        current_month_str = date.today().strftime('%Y-%m')
+        usage = {'month': current_month_str, 'count': 0}
 
         try:
             with open(QUOTA_FILE, 'r') as f:
                 usage = json.load(f)
-            # Reset count if it's a new day
-            if usage.get('date') != today_str:
-                app.logger.info("New day, resetting API call quota.")
-                usage = {'date': today_str, 'count': 0}
+            # Reset count if it's a new month
+            if usage.get('month') != current_month_str:
+                app.logger.info("New month, resetting API call quota.")
+                usage = {'month': current_month_str, 'count': 0}
         except (FileNotFoundError, json.JSONDecodeError):
             # If file doesn't exist or is corrupt, create a new one.
             app.logger.info("Quota file not found or corrupt, creating a new one.")
             pass # usage is already initialized for today
 
-        if usage['count'] + calls_to_make > DAILY_API_CALL_LIMIT:
-            app.logger.warning(f"Daily API call limit reached. Current count: {usage['count']}, tried to add: {calls_to_make}")
+        if usage['count'] + calls_to_make > MONTHLY_API_CALL_LIMIT:
+            app.logger.warning(f"Monthly API call limit reached. Current count: {usage['count']}, tried to add: {calls_to_make}")
             return False
         
         # Consume the quota
@@ -179,7 +179,7 @@ def check_and_consume_quota(calls_to_make: int) -> bool:
         try:
             with open(QUOTA_FILE, 'w') as f:
                 json.dump(usage, f)
-            app.logger.info(f"Consumed {calls_to_make} API calls. New daily count: {usage['count']}")
+            app.logger.info(f"Consumed {calls_to_make} API calls. New monthly count: {usage['count']}")
             return True
         except IOError as e:
             app.logger.error(f"Error writing to quota file: {e}")
@@ -192,19 +192,19 @@ def get_remaining_quota() -> int:
     This function is read-only and does not consume the quota.
     """
     with quota_lock:
-        today_str = date.today().strftime('%Y-%m-%d')
+        current_month_str = date.today().strftime('%Y-%m')
         try:
             with open(QUOTA_FILE, 'r') as f:
                 usage = json.load(f)
-            # If the stored date is not today, the quota is fully available.
-            if usage.get('date') != today_str:
-                return DAILY_API_CALL_LIMIT
+            # If the stored month is not the current one, the quota is fully available.
+            if usage.get('month') != current_month_str:
+                return MONTHLY_API_CALL_LIMIT
             
-            remaining = DAILY_API_CALL_LIMIT - usage.get('count', 0)
+            remaining = MONTHLY_API_CALL_LIMIT - usage.get('count', 0)
             return max(0, remaining) # Ensure it doesn't go below zero
         except (FileNotFoundError, json.JSONDecodeError):
             # If file doesn't exist or is corrupt, the full quota is available.
-            return DAILY_API_CALL_LIMIT
+            return MONTHLY_API_CALL_LIMIT
 
 # --- API-FUNKTIONEN ---
 
@@ -374,7 +374,7 @@ def search() -> Any:
     # Check if the number of required searches exceeds the daily API call limit.
     num_searches = delta.days + 1
     if not check_and_consume_quota(num_searches):
-        return redirect(url_for('index', error=f"Das tägliche API-Limit von {DAILY_API_CALL_LIMIT} Aufrufen wurde erreicht. Bitte versuchen Sie es morgen erneut."))
+        return redirect(url_for('index', error=f"Das monatliche API-Limit von {MONTHLY_API_CALL_LIMIT} Aufrufen wurde erreicht. Bitte versuchen Sie es im nächsten Monat erneut."))
     # --- END QUOTA CHECK ---
 
     try:
